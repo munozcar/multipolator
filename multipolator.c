@@ -5,7 +5,7 @@ Written and updated by Carlos E. Munoz-Romero, Geronimo L. Villanueva.[1]
 Last edited: July 2019
 
 multipolator finds nearest grid points to a given input and approximates the function through a
-weighted average of all possible permutations. Weights are normalized using a partition function.
+weighted average of the nearest neighbors. Weights are normalized using a partition function.
 */
 
 #include <sys/mman.h>
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
   size_t length;
   double *grid;                                 // Grid will have values of type double.
   int param_N = strtol(argv[1], NULL, 10);      // Number of parameters (dimensions) in the grid
-  int paramvals_N = strtol(argv[2], NULL, 10);  // (Max) Number of parameter values in the grid
+  int paramvals_N = strtol(argv[2], NULL, 10);  // Max Number of parameter values in the grid
   int points_N = strtol(argv[3], NULL, 10);     // (Max) Number of model points per parameter
   struct stat sb;
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     {printf("\nParameter space too large! Exit.\n\n"); return EXIT_FAILURE;}
 
   double parameters[MAX_PARAMS][MAX_PARAMVALS] = {0};
-  double interpolation_params[param_N];
+  double interpolation_params[param_N];           // Input parameters
   int interpolation_indices[MAX_PARAMS][2] = {0}; // Array for indices of 'left' and 'right' closest points.
 
   int permutations = (int)pow(2,param_N);  // Total number of permutations 2^(number of parameters)
@@ -253,12 +253,45 @@ int main(int argc, char *argv[])
     }
   }
 
-  printf("\n SUCCESS\n\n");
+  printf("SUCCESS\n");
 
   printf("\n-----------------------------------------------------------------\n");
-  printf("\n INTERPOLATION MODULE\n\n");
+  printf("\n KERNEL REGRESSION MODULE \n");
+  printf("\n CALCULATING NORMALIZED EUCLIDEAN WEIGHTS\n\n");
 
-  
+  double weights[permutations];
+  double weight, normalizer, difference, to_unit;
+ // Each permutation is assigned a weight based on the inverse Euclidean distance relative to the
+ // input. The data acts, then, as it's own training set.
+  normalizer = 0;
+  for (int i=0; i<permutations; i++){  // For each permutation
+    weight = 0;
+    for (int j=0; j<param_N; j++) {   // For each parameter
+      difference = interpolation_params[j]-parameters[j][interpolation_indices[j][permutation_indices[i][j]]];
+      to_unit = parameters[j][interpolation_indices[j][1]]  - parameters[j][interpolation_indices[j][0]];
+      weight += pow(difference/to_unit,2);
+    }
+    weight = pow(weight,-0.5);
+    normalizer+=weight;
+    weights[i] = weight;
+  }
+
+  for (int i=0; i<permutations; i++){
+    weights[i] = weights[i]/normalizer;
+    printf("Weight %d: %0.12lf\n", i, weights[i]);
+  }
+
+  printf("\n INTEPOLATING...\n\n");
+
+  double interpolated_model[points_N];
+
+  for (){
+    for(){
+      
+    }
+  }
+
+  printf("\n-----------------------------------------------------------------\n");
 
   printf( "\nDONE\n");
 
