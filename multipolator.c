@@ -278,6 +278,9 @@ int main(int argc, char *argv[])
 
   for (int i=0; i<permutations; i++){
     weights[i] = weights[i]/normalizer;
+    if (weights[i] != weights[i]){      // If we happen to land on a grid point...
+      weights[i] = 1;
+    }
     printf("Weight %d: %0.12lf\n", i, weights[i]);
   }
 
