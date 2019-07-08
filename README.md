@@ -1,5 +1,5 @@
 # Multipolator
-N-dimensional Grid Interpolation based on Kernel Regression.
+N-dimensional Grid Interpolation based on Nadaraya–Watson Kernel Regression.
 
 Usage: ./multipolator N y z 'GRID.txt'
 
