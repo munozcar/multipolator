@@ -5,7 +5,7 @@ Written and updated by Carlos E. Munoz-Romero, Geronimo L. Villanueva.[1]
 Last edited: July 2019
 
 multipolator finds nearest grid points to a given input and approximates the function through a
-weighted average of the nearest neighbors. Weights are normalized using a partition function.
+weighted average of all possible permutations. Weights are normalized using a partition function.
 */
 
 #include <sys/mman.h>
