@@ -285,19 +285,29 @@ int main(int argc, char *argv[])
 
   double interpolated_model[points_N];
 
-  for (){
-    for(){
-      
-    }
+  for (int i=0; i<points_N; i++){ // Populate with zeros
+    interpolated_model[i] = 0;
   }
 
+  for (int i=0; i<points_N; i++){
+    for(int j=0; j<permutations; j++){
+      interpolated_model[i]+=weights[j]*models[j][i];
+    }
+  }
   printf("\n-----------------------------------------------------------------\n");
+  printf("\n WRITING OUTPUT TO FILE.\n\n");
 
+  FILE *f = fopen("output.txt", "w");
+
+  for(int i=0; i<points_N; i++){
+    fprintf(f, "%.12lf\n",interpolated_model[i]);
+  }
   printf( "\nDONE\n");
 
   // Remove RAM mapping, close file. Fin.
   munmap(grid, length);
   close(file_descriptor);
+  fclose(f);
 
   return EXIT_SUCCESS;
 }
