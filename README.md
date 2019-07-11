@@ -1,6 +1,8 @@
-# Multipolator
-N-dimensional Grid Interpolation based on Kernel Regression, using a Nadaraya–Watson estimator.
+# MULTIPOLATOR
+N-dimensional interpolation based on inverse distance weighting of nearest grid points. 
 
-Usage: ./multipolator N y z 'GRID.txt'
+Usage: make clean
+       make
+       ./multipolator 
 
-Where N is the number of dimensions, y is the max. number of values for any given parameter, z is the number of points per model, and 'GRID.txt' is a binary file containing the grid.
+Example test provided uses [ATMO](https://drive.google.com/drive/folders/1Yz94usAAiXtnLR0yoq-qkuhegRrI4u4B) grid to interpolate an exoplanetary transmission spectrum.
