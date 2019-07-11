@@ -4,8 +4,7 @@ Written and updated by Carlos E. Munoz-Romero, Geronimo L. Villanueva.[1]
 [1] Goddard Center for Astrobiology, NASA GSFC, Greenbelt, MD.
 Last edited: July 2019
 
-multipolator finds nearest grid points to a given input and approximates the function through a
-weighted average of the nearest neighbors. Weights are normalized using a partition function.
+multipolator approximates a multivariate function by inverse distance weighting its nearest neighbors.
 */
 
 #include <sys/mman.h>
@@ -15,12 +14,8 @@ weighted average of the nearest neighbors. Weights are normalized using a partit
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include "multipolator.h"
 
-#define MAX_PARAMVALS 100
-#define MAX_PARAMS 10
-
-// AUXILIARY PROCEDURES
-//-------------------------------------------------------------------------------------------------
 int factorial(int num){
   int fac = num;
   if (num==0){
@@ -51,6 +46,8 @@ void reverse(int *elements, int i, int j){
     swap(elements, i+offset, j-offset);
   }
 }
+
+// PERMUTATOR -------------------------------------------------------------------------------------
 
 void find_permutations(int *elements, int last_index, int permutation_count, int permutation_indices[][last_index+1], int *pnum){
 
@@ -86,25 +83,12 @@ void find_permutations(int *elements, int last_index, int permutation_count, int
   }
 
 }
-// -----------------------------------------------------------------------------------------------
-int main(int argc, char *argv[])
-{
-  if (argc != 5) {printf("\nWrong number of arguments! Exit.\n\n"); return EXIT_FAILURE;}
 
-  int i = 0;
-  int file_descriptor;
-  size_t length;
-  double *grid;                                 // Grid will have values of type double.
-  int param_N = strtol(argv[1], NULL, 10);      // Number of parameters (dimensions) in the grid
-  int paramvals_N = strtol(argv[2], NULL, 10);  // Max Number of parameter values in the grid
-  int points_N = strtol(argv[3], NULL, 10);     // (Max) Number of model points per parameter
-  struct stat sb;
+// MULTIPOLATOR -----------------------------------------------------------------------------------
 
-  if (paramvals_N > MAX_PARAMVALS || param_N > MAX_PARAMS)
-    {printf("\nParameter space too large! Exit.\n\n"); return EXIT_FAILURE;}
+void multipolator(double *grid, double *interpolation_params, double *interpolated_model, int param_N, int points_N) {
 
-  double parameters[MAX_PARAMS][MAX_PARAMVALS] = {0};
-  double interpolation_params[param_N];           // Input parameters
+  double parameters[MAX_PARAMS][MAX_PARAMVALS];
   int interpolation_indices[MAX_PARAMS][2] = {0}; // Array for indices of 'left' and 'right' closest points.
 
   int permutations = (int)pow(2,param_N);  // Total number of permutations 2^(number of parameters)
@@ -112,23 +96,12 @@ int main(int argc, char *argv[])
   int param_shape[param_N];                // Exactly how many values for each parameter we have
   double models[permutations][points_N];   // Array to save models for interpolation
 
-  // Open file with data.
-  file_descriptor = open(argv[4], O_RDONLY);
-
-  // Calculate size of grid & check for reading error.
-  if (fstat(file_descriptor, &sb) == -1) {exit(EXIT_FAILURE);}
-  length = sb.st_size; // Length, in bytes.
-
-  // Map file into RAM
-  grid = mmap(NULL, length, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
-  if (grid == MAP_FAILED) {exit(EXIT_FAILURE);}
-
   // Read the parameter space, shifting to the next parameter when a nan is encountered.
   // Skip first row, as it contains the covariates.
 
   for (int i=0; i < param_N; i++) {
     param_shape[i] = 0;
-    for (int j=0; j < paramvals_N; j++){
+    for (int j=0; j < MAX_PARAMVALS; j++){
       parameters[i][j] = grid[points_N*(i+1)+j];
       if (parameters[i][j] == parameters[i][j]) { // If not nan, we have not read all values of this parameter
         param_shape[i]++;
@@ -143,7 +116,7 @@ int main(int argc, char *argv[])
      printf("%2d VALUES\t", param_shape[j]);
    }
   printf("\n");
-  for (int i = 0; i < paramvals_N; ++i) {
+  for (int i = 0; i < 22; ++i) {
     for (int j=0; j < param_N; j++){
       if (parameters[j][i] == parameters[j][i]) {
         printf("%8.2lf \t", parameters[j][i]);
@@ -159,11 +132,7 @@ int main(int argc, char *argv[])
    printf("\n-----------------------------------------------------------------\n");
    printf( "INTERPOLATION PARAMETERS:\n");
 
-   for (int i=0; i < param_N; i++) {
-     scanf("%lf", &interpolation_params[i]);
-   }
    // Confirm parameters to interpolate
-   printf("\n");
    printf( "WILL INTERPOLATE TO:\n");
    for (int i=0; i < param_N; i++) {
      printf("%8.2lf\t", interpolation_params[i]);
@@ -187,7 +156,7 @@ int main(int argc, char *argv[])
         interpolation_params[i] < parameters[i][0])
         {
           printf("\nParameter out of range! %8.2lf \n Exit.\n\n", interpolation_params[i]);
-          return EXIT_FAILURE;
+          exit(EXIT_FAILURE);
         }
   }
   for (int i=0; i < param_N; i++) {
@@ -214,8 +183,7 @@ int main(int argc, char *argv[])
   int permutation_count[param_N+1];
   int layer[param_N];                               // A single layer
   int layer_matrix[param_N+1][param_N];               // Each row will have its own permutations.
-  int temp, skip_index;
-  int curr = 0;
+  int skip_index;
   int pnum[1] = {0};
 
 
@@ -256,7 +224,7 @@ int main(int argc, char *argv[])
   printf("SUCCESS\n");
 
   printf("\n-----------------------------------------------------------------\n");
-  printf("\n KERNEL REGRESSION MODULE \n");
+  printf("\n INVERSE WEIGHTING MODULE \n");
   printf("\n CALCULATING NORMALIZED EUCLIDEAN WEIGHTS\n\n");
 
   double weights[permutations];
@@ -272,6 +240,7 @@ int main(int argc, char *argv[])
       weight += pow(difference/to_unit,2);
     }
     weight = pow(weight,-0.5);
+    weight = pow(weight,7); // Smoothing
     normalizer+=weight;
     weights[i] = weight;
   }
@@ -284,9 +253,8 @@ int main(int argc, char *argv[])
     printf("Weight %d: %0.12lf\n", i, weights[i]);
   }
 
-  printf("\n INTEPOLATING...\n\n");
 
-  double interpolated_model[points_N];
+  printf("\n INTEPOLATING...\n\n");
 
   for (int i=0; i<points_N; i++){ // Populate with zeros
     interpolated_model[i] = 0;
@@ -298,19 +266,5 @@ int main(int argc, char *argv[])
     }
   }
   printf("\n-----------------------------------------------------------------\n");
-  printf("\n WRITING OUTPUT TO FILE.\n\n");
-
-  FILE *f = fopen("output.txt", "w");
-
-  for(int i=0; i<points_N; i++){
-    fprintf(f, "%.12lf\n",interpolated_model[i]);
-  }
   printf( "\nDONE\n");
-
-  // Remove RAM mapping, close file. Fin.
-  munmap(grid, length);
-  close(file_descriptor);
-  fclose(f);
-
-  return EXIT_SUCCESS;
 }
