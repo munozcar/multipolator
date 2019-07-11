@@ -70,13 +70,10 @@ void find_permutations(int *elements, int last_index, int permutation_count, int
     swap(elements, i, j);
     reverse(elements, i+1, last_index);
   }
-  printf("CASE %d: ",pnum[0]);
   for (int k=0; k<last_index+1; k++){
     permutation_indices[pnum[0]][k] = elements[k];
-    printf("%d ", permutation_indices[pnum[0]][k]);
   }
   pnum[0] = pnum[0] + 1;
-  printf("\n");
   if (permutation_count>0){
     permutation_count--;
     find_permutations(elements, last_index, permutation_count, permutation_indices, pnum);
@@ -86,18 +83,22 @@ void find_permutations(int *elements, int last_index, int permutation_count, int
 
 // MULTIPOLATOR -----------------------------------------------------------------------------------
 
-void multipolator(double *grid, double *interpolation_params, double *interpolated_model, int param_N, int points_N) {
+void multipolator(double *grid, double *interpolation_params, double *interpolated_model) {
 
-  double parameters[MAX_PARAMS][MAX_PARAMVALS];
+  int param_N = grid[0];      // Number of parameters (dimensions) in the grid
+  int points_N = grid[1];     // (Max) Number of model points per parameter
+
   int interpolation_indices[MAX_PARAMS][2] = {0}; // Array for indices of 'left' and 'right' closest points.
 
   int permutations = (int)pow(2,param_N);  // Total number of permutations 2^(number of parameters)
   int multiplicatives[param_N];
-  int param_shape[param_N];                // Exactly how many values for each parameter we have
   double models[permutations][points_N];   // Array to save models for interpolation
 
+  double parameters[MAX_PARAMS][MAX_PARAMVALS];
+  int param_shape[param_N];                // Exactly how many values for each parameter we have
+
   // Read the parameter space, shifting to the next parameter when a nan is encountered.
-  // Skip first row, as it contains the covariates.
+  // Skip first row, as it contains the header.
 
   for (int i=0; i < param_N; i++) {
     param_shape[i] = 0;
@@ -109,40 +110,10 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
     }
   }
 
-  // Print parameter space
-  printf("\n-----------------------------------------------------------------\n");
-  printf("PARAMETER SPACE\n\nFOUND:\n\n");
-  for (int j=0; j < param_N; j++){
-     printf("%2d VALUES\t", param_shape[j]);
-   }
-  printf("\n");
-  for (int i = 0; i < 22; ++i) {
-    for (int j=0; j < param_N; j++){
-      if (parameters[j][i] == parameters[j][i]) {
-        printf("%8.2lf \t", parameters[j][i]);
-      }
-      else {
-        printf("\t\t");
-      }
-     }
-     printf("\n");
-   }
-
-   // We will interpolate to these parameters
-   printf("\n-----------------------------------------------------------------\n");
-   printf( "INTERPOLATION PARAMETERS:\n");
-
-   // Confirm parameters to interpolate
-   printf( "WILL INTERPOLATE TO:\n");
-   for (int i=0; i < param_N; i++) {
-     printf("%8.2lf\t", interpolation_params[i]);
-   }
-   printf("\n-----------------------------------------------------------------\n");
-
   // Now we perform the interpolation
 
   // Find INDICES of the two closest points to each interpolation parameter
-  printf( "PERMUTATION MODULE\n\nFINDING NEAREST TWO GRID POINTS TO EACH PARAMETER:\n");
+
   for (int i=0; i<param_N; i++) {
     while (parameters[i][interpolation_indices[i][0]] <= interpolation_params[i]) {
       interpolation_indices[i][0]++;
@@ -159,13 +130,8 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
           exit(EXIT_FAILURE);
         }
   }
-  for (int i=0; i < param_N; i++) {
-    printf("%8.2lf\t%8.2lf\n", parameters[i][interpolation_indices[i][0]],
-                               parameters[i][interpolation_indices[i][1]]);
-  }
 
   // Next, we find and read all models corresponding to the permutations
-  printf( "\nFINDING INDEX MULTIPLICATIVES:\n");
 
   // This step allows us to find the indices of the models of interest
   for (int i=0; i<param_N; i++){
@@ -173,11 +139,9 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
     for (int j=0; j<i; j++){
       multiplicatives[i]*=param_shape[j];
     }
-    printf("%d\n", multiplicatives[i]);
   }
 
   // Calculate all posible permutations
-  printf( "\nTHERE WILL BE (%d) MODEL PERMUTATIONS IN TOTAL.\n\nPASCAL MATRIX (0 AND 1 FOR LEFT AND RIGHT ENDPOINTS):\n\n", permutations);
 
   int permutation_indices[permutations][param_N];   // Will store all possible combinations here
   int permutation_count[param_N+1];
@@ -193,22 +157,16 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
     for (int j=0; j<param_N; j++) {
       if (i<=j) {layer_matrix[i][j] = 1;}
       else {layer_matrix[i][j] = 0;}
-      printf("%d ", layer_matrix[i][j]);
     }
     permutation_count[i] = choose(param_N,param_N-i);
-    printf(" PERMUTATIONS: %d\n", permutation_count[i]);
   }
-  printf("\n");
 
-  printf("GENERATING PERMUTATIONS:\n\n");
   for (int i=0; i<param_N+1; i++){
     for (int j=0; j<param_N; j++){
       layer[j] = layer_matrix[i][j];
     }
     find_permutations(layer, param_N-1, permutation_count[i]-1, permutation_indices, pnum);
   }
-
-  printf("\n FOR EACH CASE, SAVING MODELS...\n\n");
 
   for(int i=0; i<permutations; i++) {
     skip_index = 0;
@@ -221,11 +179,7 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
     }
   }
 
-  printf("SUCCESS\n");
-
-  printf("\n-----------------------------------------------------------------\n");
-  printf("\n INVERSE WEIGHTING MODULE \n");
-  printf("\n CALCULATING NORMALIZED EUCLIDEAN WEIGHTS\n\n");
+  // Inverse distance weighting
 
   double weights[permutations];
   double weight, normalizer, difference, to_unit;
@@ -250,21 +204,15 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
     if (weights[i] != weights[i]){      // If we happen to land on a grid point...
       weights[i] = 1;
     }
-    printf("Weight %d: %0.12lf\n", i, weights[i]);
+
   }
 
-
-  printf("\n INTEPOLATING...\n\n");
-
-  for (int i=0; i<points_N; i++){ // Populate with zeros
-    interpolated_model[i] = 0;
-  }
+  // Final step: weighted sum
 
   for (int i=0; i<points_N; i++){
+    interpolated_model[i] = 0;
     for(int j=0; j<permutations; j++){
       interpolated_model[i]+=weights[j]*models[j][i];
     }
   }
-  printf("\n-----------------------------------------------------------------\n");
-  printf( "\nDONE\n");
 }

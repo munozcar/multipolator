@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <time.h>
+
 #include "multipolator.h"
 
 int main() {
@@ -26,26 +28,31 @@ int main() {
   grid = mmap(NULL, length, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
   if (grid == MAP_FAILED) {exit(EXIT_FAILURE);}
 
+  double interpolation_params[6];
 
-  int iteration = 0;
-  double interpolation_params[6] = {600, 6, 0.6, 0.6, 5, 0.6};
+  interpolation_params[0] = 600;
+  interpolation_params[1] = 6;
+  interpolation_params[2] = 0.6;
+  interpolation_params[3] = 0.6;
+  interpolation_params[4] = 6;
+  interpolation_params[5] = 0.6;
+
   double interpolated_model[5000];
 
-  int param_N = grid[0];      // Number of parameters (dimensions) in the grid
-  int points_N = grid[1];     // (Max) Number of model points per parameter
-
-
-  while (iteration<1000){
-    multipolator(grid, interpolation_params, interpolated_model, param_N, points_N);
-    for (int i=0; i<param_N; i++){
-      interpolation_params[i]*=1.00001;
-    }
-    for(int i=0; i<points_N; i++){
-      fprintf(stdout, "DONE.");
-    }
-    iteration++;
+  clock_t t;
+  t = clock();
+  for (int i=0; i<1000; i++){
+    multipolator(grid, interpolation_params, interpolated_model);
   }
 
+  t = clock() - t;
+  double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
+
+  printf("50000 mutlipolator() calls took %f seconds to execute \n", time_taken);
+
+  //for (int i=0; i<points_N; i++){
+  //  printf("%.12lf\n", interpolated_model[i]);
+  //}
   // Remove RAM mapping, close file. Fin.
   munmap(grid, length);
   close(file_descriptor);

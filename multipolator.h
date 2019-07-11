@@ -5,11 +5,7 @@
 
 #define MAX_PARAMS 10
 #define MAX_PARAMVALS 100
-#define IGNORE_PRINTF 1
 
-#ifdef IGNORE_PRINTF
-#define printf(fmt, ...) (0)
-#endif
 // FUNCTION PROTOTYPES ----------------------------------------------------------------------------
 
 int factorial(int num);
@@ -22,4 +18,4 @@ void reverse(int *elements, int i, int j);
 
 void find_permutations(int *elements, int last_index, int permutation_count, int permutation_indices[][last_index+1], int *pnum);
 
-void multipolator(double *grid, double *parameters, double *model, int param_N, int points_N);
+void multipolator(double *grid, double *interpolation_parameters, double *model);
