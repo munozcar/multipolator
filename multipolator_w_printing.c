@@ -245,7 +245,7 @@ void multipolator(double *grid, double *interpolation_params, double *interpolat
       weight += pow(difference/to_unit,2);
     }
     weight = pow(weight,-0.5);
-    weight = pow(weight,7); // Smoothing
+    weight = pow(weight,param_N+1); // Smoothing
     normalizer+=weight;
     weights[i] = weight;
   }
