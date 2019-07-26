@@ -11,8 +11,8 @@ PROGS = multipolator
 # Name of the executables:
 all: $(PROGS)
 
-multipolator: ATMO_interpolate.c multipolator.c multipolator.h
-	$(CC) $(CFLAGS) -lm -o $@ ATMO_interpolate.c multipolator.c
+multipolator: ATMO_interpolate.c multipolator_w_printing.c multipolator.h
+	$(CC) $(CFLAGS) -lm -o $@ ATMO_interpolate.c multipolator_w_printing.c
 
 clean:
 	rm -f $(PROGS)
