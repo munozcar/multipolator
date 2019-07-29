@@ -1,4 +1,4 @@
-#multipolator
+# multipolator
 N-dimensional interpolation based on inverse distance weighting of nearest grid points. 
 
 ## INFO
