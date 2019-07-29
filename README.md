@@ -1,4 +1,5 @@
 <img src="logo.jpeg" width="300">
+
 # multipolator
 N-dimensional interpolation based on smoothed inverse-distance weighting of nearest grid points. Written and updated by [Carlos E. Munoz Romero](https://github.com/munozcar/) 2019.
 
